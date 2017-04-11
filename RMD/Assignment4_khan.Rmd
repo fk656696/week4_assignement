@@ -1,0 +1,176 @@
+---
+title: "Assignment4_khan"
+author: "Firasath Ali Khan"
+date: "April 11, 2017"
+output: html_document
+---
+```{r}
+getwd()
+setwd("G:/Rockhurst spring/ADM/Assignments/wk4")
+
+library(arules) 
+bookbaskets <- read.transactions("bookdata.tsv.gz", format="single",sep="\t", cols=c("userid", "title"), rm.duplicates=T)
+```
+
+
+```{r}
+inspect(bookbaskets[1:5]) #Examine the first five transactions
+
+basketSizes<-size(bookbaskets) #Calculate number of books purchased by "userID"
+
+bookFreq<-itemFrequency(bookbaskets) #Calculate the support for each book title 
+
+
+bookCount <- (bookFreq/sum(bookFreq))*sum(basketSizes) 
+#   Get the absolute count of book occurrences. 
+
+#we are not interested in seeing transactions that has occured only once, so let us filter out the transactions that has occured only once,
+ #and take only those who have occured more than once,
+bookbasket_use<-bookbaskets[basketSizes>1] #Only keep transactions with more than one book purchased. 
+
+bookbasket_use #This is the data file we will be using for further analysis in this exercise.
+```
+
+
+```{r}
+itemFrequency(bookbasket_use)
+freq_bookbaskets_data_frame <- as.data.frame(itemFrequency(bookbasket_use)) # here we are making a dataframe
+View(freq_bookbaskets_data_frame[1:10])
+
+itemFrequencyPlot(bookbasket_use, topN = 10) 
+#this chunk gives us the top 10 book purchases from the data file, as we can see below the Histogram gives us the most popular book list.
+##The Best selling titles are : Wild Animus : 2502 purchases, The lovely bones:A novel :1298 purchases,Shes Come undone : 934 purchases, Da vinci Code: 905 purchases,Harry potter ,The Nanny Diaries and so on.
+#These top 10 list gives us a good base from where we can start our analysis and also see which books are the top 10 list Associated to so that we can include them in display or keep them nearby to those best-sellers.
+```
+
+
+```{r}
+
+                     
+## As requested by the owner, the title Wild Animus is removed from the data set, and new file called basket_rules1 is created containing transactions of all books except Wild Animus.
+
+
+bookbaskets_noAnimus <- apriori(bookbaskets, parameter = list(support= 0.001, confidence = 0.75,minlen = 2, maxlen = 10),appearance = list(none = c("Wild Animus"))) 
+#Here Apriori(used to get association rules) is used on bookbaskets_noanimus dataset and support of 1% and confidence of 75% is taken.
+basket_rules1<-bookbaskets_noAnimus
+
+bookbasket1_sorted <-sort(basket_rules1, by = c("lift", "confidence"))
+summary(bookbasket1_sorted)
+## a total of 92108 transactions are present in this data set.this has created a set with 101 rules and maximum datset of 5 transactions.as we can see from the data that there are 8 rules for 2 transactions,62 rules for dataset conatining 3 transactions, 27 rules for dataset containing 4 transactions and only 4 rules for dataset conatining 5 transactions.
+inspect(bookbasket1_sorted[1:10])
+## Discussion of Association rules. Here I have looked at first ten association rules ad can tell if any customer purchases Soul Harvest: The world Takes Sides he will buy Apollyon: The Destroyer Is Unlieashed, books in key Trilogy seeries have high associative property followed by Stephanie Plum Novels.
+##PIC-desktop inspectbookbasket1_sorted
+```
+
+```{r}
+
+#we are creating a new data frame with the above created rules file.
+bookbasket1_sorted_df <- as(bookbasket1_sorted, "data.frame")
+#Visualising the data
+library(arulesViz)
+plot(bookbasket1_sorted[1:5], method="graph") # graphing only first 5 transactions from the datafile.
+plot(bookbasket1_sorted[1:5], method="grouped") #graphing only first 5 transactions from the datafile.
+plot(bookbasket1_sorted, shading="order", control=list(main="Two-key plot"))
+```
+
+```{r}
+#Here I have analysed the same file by tweaking the parameters of support and confidence.Here I am able to get 40822 transactions with 68 rules with 1 rule in with 3-itemsets13 rules in 4-itemsets,39 rules in 5-itemsets and 15 rules in 6-itemsets.
+basket_rules2 <- apriori(bookbasket_use, parameter = list(support= 0.0015, confidence = 0.95,minlen = 2, maxlen = 10),appearance = list(none = c("Wild Animus"))) 
+inspect(basket_rules2) ## Top associations are as follows: If a customer purchases High Five he is more likey to purchase Four to Score,Stephanie Plum books such as Three To Get Deadly: A Stephanie Plum Novel,Hot Six and A Stephanie Plum Novel in a series., Harry potter series and Two for dough
+summary(basket_rules2)
+
+
+# Sort by lift & Confidence 
+bookbasket2_sorted <-sort(basket_rules2, by = c("lift", "confidence"))
+inspect(bookbasket2_sorted[1:10])# After sorting these datset with both lift and confidence  highest association for the books are as follows : Nicolae: The Rise of Antichrist- this is the third book in the left behind series, and books in series- A Stephanie Plum Novelseries which seem to have popularity among readers.
+```
+
+```{r}
+
+#Visualising the Dataframe
+library(arulesViz)
+#Graph shows relationship between top 10 books sorted by Lift.
+plot(bookbasket2_sorted[1:10], method="graph")
+#Scatter plot of the rules.
+plot(bookbasket2_sorted)
+#Two-key plot. Let you see the k-itemset rules by different coding colors.
+plot(bookbasket2_sorted, shading="order", control=list(main="Two-key plot"))
+#Let's make it so that we can use the plots interactively. It's a bit clunky but still cool.
+#Click stop to end the interactive mode.
+
+`````
+
+```{r}
+##OPRAH BOOK CLUB AUDIENCE :To suggest the owner, books to entertain the audience of the oprah book club I have used subset function to include the names of all the books used in the Oprah book cub and tried to see if any of the books in our database forms an association with any book on the oprah bookclub list.I have found only 3 associations and the Book Jewel forms an high association with She's Come Undone.
+
+oprah_asoc_rules<- subset(bookbasket2_sorted, items %in% "Jewel","The Deep End of the Ocean","Song of Solomon", "The book of Ruth","The Heart of a Woman", "The Rapture of Canaan","Stones from the River","A Lesson Before Dying","Black and Blue",
+                          "Ellen Foster","The Best Way to Play","Breath, eyes, Memory","A virtuous Woman","Paradise","I Know this Much Is True", "What Looks Like Crazy on an Ordinary Day","Here on Earth",
+                          "The Meanest Thing to Say", "Midwives","Where the Heart is","The Reader", "The Pilot's Wife","White Oleandr","Mother of Pearl","Tara Road","River,Cross My Heart",
+                          "Vinegar Hill","A Map of the World", "Gap Creek","Daughter of Fortune","Back Roads","the Bluest Eye","While I Was Gone","House of Sand and Frog", "Drowning Rush",
+                          "Open House","The Poisonwood Bible")
+
+oprah_sorted<- sort(oprah_asoc_rules, by = "lift")
+inspect(oprah_sorted[1:10])
+```
+
+```{r}
+##RECOMMENDING BOOKS FOR THE DISPLAY.
+
+#Top five book recommendations for top selling books:
+#I have taken top 10 best sellers and using apriori I have found the books highly associated with that book.
+
+#Top five book recommendations for a reader who has purchased "The Lovely Bones: A Novel."
+# Finding subsets of rules containing "The Lovely Bones: A Novel." items
+Lb_Association_rules <- subset(bookbasket2_sorted, items %in% "The Lovely Bones: A Novel")
+Lbones_Association_sorted <- sort(Lb_Association_rules, by = "lift")
+
+
+#Recommendations to a customer who has purchased The Lovely Bones: A novel:
+##1) High Five.
+# 2) Four to Score
+# 3) three to get Deadly: A Stephanie Plum Novel,
+# 4) Two for the Dough.
+
+
+#Top five book recommendations for a reader who has purchased " She's Come Undone.
+Shescomeundone_assoc_rules <- subset(bookbasket2_sorted, items %in% "She's Come Undone")
+Shescomeundone_assoc_sorted <- sort(Shescomeundone_assoc_rules, by = "lift")
+
+#Recommendations to a customer who has purchased " She's Come Undone "
+# 1)two for the Dough,
+# 2)Jewel
+# 3)Confessions of a Shopaloholic.
+# 4)One for the Money.
+# 5)Violets are Blue
+
+
+#Top five book recommendations for a reader who has purchased "The Da Vinci Code"
+davinvci_Association_rules1 <- subset(bookbasket2_sorted, items %in% "The Da Vinci Code")
+davinci_sorted <- sort(davinvci_Association_rules1, by = "lift")
+
+#1)Harry potter series
+#2)A Stephanie Plum Novel series
+
+
+#Top five book recommendations for a reader who has purchased "The Nanny Diaries: A Novel"
+nanny_assoc_rules <- subset(bookbasket2_sorted, items %in% "The Nanny Diaries: A Novel")
+nanny_sorted<- sort(nanny_assoc_rules, by ="lift")
+
+#1)Shopaholic Ties the Knot,Shopaholic takes Manhattan.
+#2)Four to score,High Five, Three To Get Deadly: A stephanie Plum Novel.
+
+paint_assoc_rules<- subset(bookbasket2_sorted, items %in% "A Painted House" )
+paint_sorted<- sort(paint_assoc_rules, by = "lift")
+
+#1)The Pelican belief,
+#2)The partner.
+#3)One fot the Money.
+#4)The Client, the Chamber
+```
+
+
+
+
+##write csv
+
+write(bookbasket1_sorted, file = "G:/Rockhurst spring/ADM/Done Assignmnts/wk4/data/basket_rules.csv ", sep = ",", quote = TRUE, row.names = FALSE)
